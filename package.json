@@ -1,0 +1,19 @@
+{
+  "name": "shack",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "parcel ./web/index.html",
+    "typings": "node ./util/generate-typings.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "node-c-lexer": "^1.0.5",
+    "parcel": "^1.12.4",
+    "prettier": "^2.1.2",
+    "typescript": "^4.0.3"
+  }
+}
