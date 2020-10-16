@@ -1,39 +1,44 @@
 const fs = require('fs');
 const path = require('path');
-const { lexUnit } = require('node-c-lexer');
 
 const C_TO_TS_TYPES = {
   int: 'number',
+  'unsigned int': 'number',
   float: 'number',
   double: 'number',
   char: 'string',
   string: 'string',
 };
 
+const C_TO_TS_ARRAY_TYPES = {
+  'unsigned int': 'Uint32Array',
+};
+
 function parseFunctionDeclaration(decl) {
-  const tokens = lexUnit.tokenize(decl);
-  const params = [];
+  const [signature, paramsString] = decl.split('(');
 
-  let i = 0;
+  const lastSignatureSpaceIdx = signature.lastIndexOf(' ');
+  const returnType = signature.slice(0, lastSignatureSpaceIdx);
+  const functionName = signature.slice(lastSignatureSpaceIdx + 1);
 
-  while (!(tokens[i].lexeme in C_TO_TS_TYPES)) i++;
-  const returnType = C_TO_TS_TYPES[tokens[i].lexeme];
+  const params = paramsString
+    .replace(');', '')
+    .split(', ')
+    .map((paramString) => {
+      const lastParamSpaceIdx = paramString.lastIndexOf(' ');
+      const paramType = paramString.slice(0, lastParamSpaceIdx).replace('const ', '');
+      const paramName = paramString.slice(lastParamSpaceIdx + 1);
+      const paramIsArray = paramName.includes('[]');
 
-  while (tokens[i].tokenClass !== 'IDENTIFIER') i++;
-  const functionName = tokens[i].lexeme;
+      if (paramIsArray) {
+        const actualType = C_TO_TS_ARRAY_TYPES[paramType] || `${C_TO_TS_TYPES[paramType]}[]`;
+        return { name: paramName.replace('[]', ''), type: actualType };
+      }
 
-  while (i < tokens.length) {
-    const paramType = tokens[i++];
-    const paramName = tokens[i];
+      return { name: paramName, type: C_TO_TS_TYPES[paramType] };
+    });
 
-    if (paramType.lexeme === ')') break;
-
-    if (paramType.lexeme in C_TO_TS_TYPES && paramName.tokenClass === 'IDENTIFIER') {
-      params.push({ type: C_TO_TS_TYPES[paramType.lexeme], name: paramName.lexeme });
-    }
-  }
-
-  return { returnType, functionName, params };
+  return { returnType: C_TO_TS_TYPES[returnType], functionName, params };
 }
 
 function* getTSModules(hFilesDir) {
