@@ -2,4 +2,3 @@
 node_modules
 wasm
 dist
-typings.d.ts
