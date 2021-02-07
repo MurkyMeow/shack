@@ -1,5 +1,9 @@
 A browser game in C
 
+## Requirements
+
+- [wasi-sdk-10](https://github.com/WebAssembly/wasi-sdk/releases/tag/wasi-sdk-10) should be placed inside /opt/ directory
+
 ## Run the code
 
 ```sh
