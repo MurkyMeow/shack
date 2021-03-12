@@ -1,4 +1,4 @@
-WASI_SDK_PATH = /opt/wasi-sdk-10.0
+WASI_SDK_PATH = /opt/wasi-sdk-12.0
 
 CC = $(WASI_SDK_PATH)/bin/clang \
 	--target=wasm32-unknown-wasi \
@@ -11,7 +11,7 @@ CC = $(WASI_SDK_PATH)/bin/clang \
 	-nostartfiles \
 	-Wl,--lto-O3
 
-OUT_DIR = wasm
+OUT_DIR = dist
 SOURCE_DIR = core
 OUT_FILES = $(OUT_DIR)/raycast.wasm
 
