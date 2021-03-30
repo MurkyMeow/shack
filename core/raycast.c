@@ -8,6 +8,8 @@
 void console_log(float) __attribute__((__import_name__("console_log")));
 
 const float FOV = M_PI_4;
+const float MOVE_SPEED = 0.1F;
+const float SENSETIVITY = 0.075F;
 
 typedef struct {
   int w;
@@ -22,6 +24,15 @@ typedef struct {
 } player_t;
 
 typedef struct {
+  unsigned int m_left;
+  unsigned int m_right;
+  unsigned int m_forward;
+  unsigned int m_backward;
+  unsigned int r_left;
+  unsigned int r_right;
+} controls_t;
+
+typedef struct {
   int w;
   int h;
   int r;
@@ -30,7 +41,8 @@ typedef struct {
 
 typedef struct {
   map_t* map;
-  player_t player;
+  player_t* player;
+  controls_t* controls;
   screen_t screen;
 } game_t;
 
@@ -97,6 +109,51 @@ map_t* map_new(int w, int h) {
   return map;
 }
 
+player_t* player_new(float x, float y, float angle) {
+  player_t* player = malloc(sizeof(player_t));
+
+  player->x = x;
+  player->y = y;
+  player->angle = angle;
+
+  return player;
+}
+
+controls_t* controls_new() {
+  controls_t* controls = malloc(sizeof(controls_t));
+  return controls;
+}
+
+void player_move(player_t* player, controls_t* controls) {
+  float dir_x = cosf(player->angle) * MOVE_SPEED;
+  float dir_y = sinf(player->angle) * MOVE_SPEED;
+
+  if (controls->m_forward) {
+    player->x += dir_x;
+    player->y += dir_y;
+  }
+  if (controls->m_backward) {
+    player->x -= dir_x;
+    player->y -= dir_y;
+  }
+
+  if (controls->m_left) {
+    player->x += dir_y;
+    player->y -= dir_x;
+  }
+  if (controls->m_right) {
+    player->x -= dir_y;
+    player->y += dir_x;
+  }
+
+  if (controls->r_left) {
+    player->angle -= SENSETIVITY;
+  }
+  if (controls->r_right) {
+    player->angle += SENSETIVITY;
+  }
+}
+
 game_t* game_new(
     map_t* map,
 
@@ -104,9 +161,7 @@ game_t* game_new(
     int screen_h,
     int screen_r,
 
-    float player_x,
-    float player_y,
-    float player_angle) {
+    player_t* player) {
   game_t* game = malloc(sizeof(game_t));
 
   game->map = map;
@@ -116,16 +171,9 @@ game_t* game_new(
   screen_t screen = {screen_w, screen_h, screen_r, wall_distancecs};
   game->screen = screen;
 
-  player_t player = {player_x, player_y, player_angle};
   game->player = player;
 
   return game;
-}
-
-void game_free(game_t* game) {
-  free(game->map->values);
-  free(game->screen.wall_distances);
-  free(game);
 }
 
 float* game_wall_distances(game_t* game) {
@@ -135,11 +183,11 @@ float* game_wall_distances(game_t* game) {
 void set_wall_distances(game_t* game) {
   int buffer_size = game->screen.w / game->screen.r;
 
-  float current_angle = game->player.angle - FOV / 2;
+  float current_angle = game->player->angle - FOV / 2;
   float angle_delta = FOV / buffer_size;
 
   for (int i = 0; i < buffer_size; i += 1) {
-    game->screen.wall_distances[i] = get_wall_distance(game->map, &game->player, current_angle);
+    game->screen.wall_distances[i] = get_wall_distance(game->map, game->player, current_angle);
     current_angle += angle_delta;
   }
 }
