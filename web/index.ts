@@ -16,48 +16,32 @@ const imports = {
 };
 
 interface MyExports extends WebAssembly.Exports {
-  map_new: Function;
   game_new: Function;
+  game_tick: Function;
+  game_controls: Function;
   game_wall_distances: Function;
-  player_new: Function;
-  player_move: Function;
-  controls_new: Function;
-  set_wall_distances: Function;
   memory: WebAssembly.Memory;
 }
 
 WebAssembly.instantiateStreaming(fetch('/raycast.wasm'), imports).then(({ instance }) => {
-  const {
-    map_new,
-    controls_new,
-    game_new,
-    game_wall_distances,
-    player_new,
-    player_move,
-    set_wall_distances,
-    memory,
-  } = instance.exports as MyExports;
-
-  const mapPointer = map_new(MAP_W, MAP_H);
-
-  const playerPointer = player_new(START_X, START_Y, START_ANGLE);
+  const { game_new, game_tick, game_controls, game_wall_distances, memory } = instance.exports as MyExports;
 
   const gamePointer = game_new(
-    mapPointer,
+    MAP_W,
+    MAP_H,
 
     SCREEN_W,
-    SCREEN_H,
     SCREEN_R,
 
-    playerPointer
+    START_X,
+    START_Y,
+    START_ANGLE
   );
 
   const distancesPointer = game_wall_distances(gamePointer);
-
   const distances = new Float32Array(memory.buffer, distancesPointer, SCREEN_W / SCREEN_R);
 
-  const controlsPointer = controls_new();
-
+  const controlsPointer = game_controls(gamePointer);
   const controls = new Uint32Array(memory.buffer, controlsPointer, 6);
 
   const canvas = document.body.appendChild(document.createElement('canvas'));
@@ -69,9 +53,7 @@ WebAssembly.instantiateStreaming(fetch('/raycast.wasm'), imports).then(({ instan
   (function render() {
     ctx.clearRect(0, 0, SCREEN_W, SCREEN_H);
 
-    player_move(playerPointer, controlsPointer);
-
-    set_wall_distances(gamePointer);
+    game_tick(gamePointer);
 
     for (let i = 0; i < SCREEN_W / SCREEN_R; i += 1) {
       const height = SCREEN_H / distances[i];

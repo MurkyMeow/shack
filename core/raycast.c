@@ -5,7 +5,8 @@
 // ==================
 // IMPORTS
 // ==================
-void console_log(float) __attribute__((__import_name__("console_log")));
+void console_log(int) __attribute__((__import_name__("console_log")));
+void console_logf(float) __attribute__((__import_name__("console_log")));
 
 const float FOV = M_PI_4;
 const float MOVE_SPEED = 0.1F;
@@ -33,20 +34,18 @@ typedef struct {
 } controls_t;
 
 typedef struct {
-  int w;
-  int h;
-  int r;
-  float* wall_distances;
-} screen_t;
+  int size;
+  float* values;
+} distances_t;
 
 typedef struct {
-  map_t* map;
-  player_t* player;
-  controls_t* controls;
-  screen_t screen;
+  map_t map;
+  player_t player;
+  controls_t controls;
+  distances_t distances;
 } game_t;
 
-float get_wall_distance(map_t* map, player_t* player, float angle) {
+float get_wall_distance(const map_t* map, const player_t* player, float angle) {
   float ray_dir_x = cosf(angle);
   float ray_dir_y = sinf(angle);
 
@@ -86,17 +85,25 @@ float get_wall_distance(map_t* map, player_t* player, float angle) {
   }
 }
 
+void set_wall_distances(game_t* game) {
+  distances_t* distances = &game->distances;
+  player_t player = game->player;
+  map_t map = game->map;
+
+  float current_angle = player.angle - FOV / 2;
+  float angle_delta = FOV / (float)distances->size;
+
+  for (int i = 0; i < distances->size; i += 1) {
+    distances->values[i] = get_wall_distance(&map, &player, current_angle);
+    current_angle += angle_delta;
+  }
+}
+
 // ==================
 // EXPORTS
 // ==================
-map_t* map_new(int w, int h) {
+map_t map_new(int w, int h) {
   int* values = malloc(sizeof(int) * w * h);
-
-  map_t* map = malloc(sizeof(map_t));
-
-  map->w = w;
-  map->h = h;
-  map->values = values;
 
   for (int i = 0; i < w * h; i += 1) {
     int x = i % h;
@@ -105,6 +112,8 @@ map_t* map_new(int w, int h) {
       values[i] = 1;
     }
   }
+
+  map_t map = {w, h, values};
 
   return map;
 }
@@ -119,12 +128,7 @@ player_t* player_new(float x, float y, float angle) {
   return player;
 }
 
-controls_t* controls_new() {
-  controls_t* controls = malloc(sizeof(controls_t));
-  return controls;
-}
-
-void player_move(player_t* player, controls_t* controls) {
+void player_move(player_t* player, const controls_t* controls) {
   float dir_x = cosf(player->angle) * MOVE_SPEED;
   float dir_y = sinf(player->angle) * MOVE_SPEED;
 
@@ -155,39 +159,44 @@ void player_move(player_t* player, controls_t* controls) {
 }
 
 game_t* game_new(
-    map_t* map,
+    int map_w,
+    int map_h,
 
     int screen_w,
-    int screen_h,
     int screen_r,
 
-    player_t* player) {
+    float start_x,
+    float start_y,
+    float start_angle) {
   game_t* game = malloc(sizeof(game_t));
 
+  map_t map = map_new(map_w, map_h);
   game->map = map;
 
-  float* wall_distancecs = malloc(sizeof(float) * screen_w / screen_r);
-
-  screen_t screen = {screen_w, screen_h, screen_r, wall_distancecs};
-  game->screen = screen;
-
+  player_t player = {start_x, start_y, start_angle};
   game->player = player;
+
+  controls_t controls = {0, 0, 0, 0, 0, 0};
+  game->controls = controls;
+
+  int distances_size = screen_w / screen_r;
+  float* distances_values = malloc(sizeof(float) * distances_size);
+
+  distances_t distances = {distances_size, distances_values};
+  game->distances = distances;
 
   return game;
 }
 
-float* game_wall_distances(game_t* game) {
-  return game->screen.wall_distances;
+controls_t* game_controls(game_t* game) {
+  return &game->controls;
 }
 
-void set_wall_distances(game_t* game) {
-  int buffer_size = game->screen.w / game->screen.r;
+float* game_wall_distances(game_t* game) {
+  return game->distances.values;
+}
 
-  float current_angle = game->player->angle - FOV / 2;
-  float angle_delta = FOV / buffer_size;
-
-  for (int i = 0; i < buffer_size; i += 1) {
-    game->screen.wall_distances[i] = get_wall_distance(game->map, game->player, current_angle);
-    current_angle += angle_delta;
-  }
+void game_tick(game_t* game) {
+  player_move(&game->player, &game->controls);
+  set_wall_distances(game);
 }
