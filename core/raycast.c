@@ -2,9 +2,6 @@
 
 #include <math.h>
 
-#include "map.h"
-#include "player.h"
-
 float get_wall_distance(const map_t* map, const player_t* player, float angle) {
   float ray_dir_x = cosf(angle);
   float ray_dir_y = sinf(angle);

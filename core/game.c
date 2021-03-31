@@ -3,9 +3,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "map.h"
-#include "raycast.h"
-
 // ==================
 // IMPORTS
 // ==================
