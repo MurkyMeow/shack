@@ -5,19 +5,32 @@ CC = $(WASI_SDK_PATH)/bin/clang \
 	--sysroot=$(WASI_SDK_PATH)/share/wasi-sysroot \
 	-O3 \
 	-flto \
-	-lm \
+
+BUILD_FLAGS = -lm \
 	-Wl,--export-all \
 	-Wl,--no-entry \
 	-nostartfiles \
 	-Wl,--lto-O3
 
 OUT_DIR = dist
+OBJECTS_DIR = object
+
 SOURCE_DIR = core
-OUT_FILES = $(OUT_DIR)/raycast.wasm
 
-$(shell mkdir -p $(OUT_DIR))
+OUTPUT = $(OUT_DIR)/game.wasm
 
-build: $(OUT_FILES)
+OBJECTS = $(OBJECTS_DIR)/game.o \
+	$(OBJECTS_DIR)/map.o \
+	$(OBJECTS_DIR)/player.o \
+	$(OBJECTS_DIR)/raycast.o
 
-$(OUT_DIR)/%.wasm: $(SOURCE_DIR)/%.c
-	$(CC) $< -o $@
+build: $(OUTPUT)
+
+$(OUTPUT): $(OBJECTS)
+	$(CC) $(BUILD_FLAGS) $(OBJECTS) -o $(OUTPUT)
+
+$(OBJECTS_DIR)/%.o: $(SOURCE_DIR)/%.c
+	$(CC) -c $< -o $@
+
+clean:
+	rm -rf $(OBJECTS_DIR)/*.o $(OUTPUT)

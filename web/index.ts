@@ -23,7 +23,7 @@ interface MyExports extends WebAssembly.Exports {
   memory: WebAssembly.Memory;
 }
 
-WebAssembly.instantiateStreaming(fetch('/raycast.wasm'), imports).then(({ instance }) => {
+WebAssembly.instantiateStreaming(fetch('/game.wasm'), imports).then(({ instance }) => {
   const { game_new, game_tick, game_controls, game_wall_distances, memory } = instance.exports as MyExports;
 
   const gamePointer = game_new(

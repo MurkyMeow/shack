@@ -1,5 +1,6 @@
 BasedOnStyle: Google
 IndentWidth: 2
+ContinuationIndentWidth: 2
 ColumnLimit: 0
 AccessModifierOffset: -4
 NamespaceIndentation: All
@@ -18,3 +19,9 @@ BraceWrapping:
   BeforeElse: false
   SplitEmptyRecord: true
   SplitEmptyNamespace: true
+AlignAfterOpenBracket: DontAlign
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackArguments: false
+BinPackParameters: false
+AllowShortFunctionsOnASingleLine: None
