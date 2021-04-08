@@ -11,12 +11,13 @@ const START_X = 2;
 const START_Y = 2;
 const START_ANGLE = -Math.PI / 4;
 
-/**
- * A dangerous thing
- * We assume that we won't allocate further this value on the C side
- * So we can safely allocate after this value on the JS side
- */
-const C_MEMORY_OFFSET = 65536;
+// 1Mb for now
+const TOTAL_MEMORY = 1024 * 1024 * 1024 * 1;
+
+// NOTE a dangerous thing
+// We assume that we won't allocate further this index on the C side
+// So we can safely allocate after this index on the JS side
+const C_MEMORY_OFFSET = TOTAL_MEMORY / 2;
 
 const SPRITES = [
   { x: 3.3, y: 3.1, texid: 0 },
@@ -39,30 +40,25 @@ interface MyExports extends WebAssembly.Exports {
   game_new: Function;
   game_tick: Function;
   game_controls: Function;
-  game_map_sprites: Function;
-  game_wall_distances: Function;
+  game_pbuffer: Function;
   memory: WebAssembly.Memory;
 }
 
 WebAssembly.instantiateStreaming(fetch('/game.wasm'), imports).then(({ instance }) => {
-  const {
-    game_new,
-    game_tick,
-    game_controls,
-    game_map_sprites,
-    game_wall_distances,
-    memory,
-  } = instance.exports as MyExports;
+  const { game_new, game_tick, game_controls, game_pbuffer, memory } = instance.exports as MyExports;
+
+  memory.grow(TOTAL_MEMORY / memory.buffer.byteLength);
 
   const allocator = new MemoryAllocator(memory.buffer, C_MEMORY_OFFSET);
 
-  const sprites = allocator.allocStructArray(SPRITE_SCHEMA, SPRITES);
+  const spritesPointer = allocator.allocStructArray(SPRITE_SCHEMA, SPRITES);
 
   const gamePointer = game_new(
     MAP_W,
     MAP_H,
 
     SCREEN_W,
+    SCREEN_H,
     SCREEN_R,
 
     START_X,
@@ -70,17 +66,14 @@ WebAssembly.instantiateStreaming(fetch('/game.wasm'), imports).then(({ instance 
     START_ANGLE,
 
     SPRITES.length,
-    sprites
+    spritesPointer
   );
 
-  const distancesPointer = game_wall_distances(gamePointer);
-  const distances = new Float32Array(memory.buffer, distancesPointer, SCREEN_W / SCREEN_R);
+  const screenBufferPointer = game_pbuffer(gamePointer);
+  const screenBuffer = new Uint8ClampedArray(memory.buffer, screenBufferPointer, SCREEN_W * SCREEN_H * 4);
 
   const controlsPointer = game_controls(gamePointer);
   const controls = new Uint32Array(memory.buffer, controlsPointer, 6);
-
-  const mapSpritesPointer = game_map_sprites(gamePointer);
-  const mapSpriteSize = 4 + 4 + 4;
 
   const canvas = document.body.appendChild(document.createElement('canvas'));
   const ctx = canvas.getContext('2d');
@@ -88,25 +81,14 @@ WebAssembly.instantiateStreaming(fetch('/game.wasm'), imports).then(({ instance 
   canvas.width = SCREEN_W;
   canvas.height = SCREEN_H;
 
-  (function render() {
-    ctx.clearRect(0, 0, SCREEN_W, SCREEN_H);
+  const imageData = ctx.getImageData(0, 0, SCREEN_W, SCREEN_H);
 
+  (function render() {
     game_tick(gamePointer);
 
-    for (let i = 0; i < SCREEN_W / SCREEN_R; i += 1) {
-      const height = SCREEN_H / distances[i];
-      ctx.fillRect(i * SCREEN_R, (SCREEN_H - height) / 2, SCREEN_R, height);
-    }
+    imageData.data.set(screenBuffer);
 
-    for (let i = 0; i < MAP_W * MAP_H; i += 1) {
-      const offset = mapSpritesPointer + i * mapSpriteSize;
-      const [spritePointer, isRendered] = new Int32Array(memory.buffer, offset, 2);
-      const [distance] = new Float32Array(memory.buffer, offset + 8, 1);
-
-      if (isRendered) {
-        console.log(distance);
-      }
-    }
+    ctx.putImageData(imageData, 0, 0);
 
     requestAnimationFrame(render);
   })();

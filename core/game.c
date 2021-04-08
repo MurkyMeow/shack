@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "map.h"
 #include "sprite.h"
 
 const float FOV = M_PI_4;
@@ -11,6 +12,7 @@ game_t* game_new(
   int map_w,
   int map_h,
   int screen_w,
+  int screen_h,
   int screen_r,
   float start_x,
   float start_y,
@@ -31,11 +33,12 @@ game_t* game_new(
   controls_t controls = {0, 0, 0, 0, 0, 0};
   game->controls = controls;
 
-  int distances_size = screen_w / screen_r;
-  float* distances_values = malloc(sizeof(float) * distances_size);
+  int zbuffer_size = screen_w / screen_r;
+  float* zbuffer = malloc(sizeof(float) * zbuffer_size);
 
-  distances_t distances = {distances_size, distances_values};
-  game->distances = distances;
+  pbuffer_t* screen_buffer = malloc(sizeof(int) * screen_w * screen_h);
+  screen_t screen = {screen_w, screen_h, screen_r, screen_buffer, zbuffer};
+  game->screen = screen;
 
   int map_size = map_w * map_h;
 
@@ -63,22 +66,20 @@ controls_t* game_controls(game_t* game) {
   return &game->controls;
 }
 
-float* game_wall_distances(game_t* game) {
-  return game->distances.values;
+pbuffer_t* game_pbuffer(game_t* game) {
+  return game->screen.pbuffer;
 }
 
-map_sprite_t* game_map_sprites(game_t* game) {
-  return game->map_sprites;
-}
+void game_set_zbuffer(game_t* game) {
+  int zbuffer_size = game->screen.w / game->screen.r;
+  float* zbuffer = game->screen.zbuffer;
 
-void game_set_distances(game_t* game) {
-  distances_t* distances = &game->distances;
   map_sprite_t* map_sprites = game->map_sprites;
   player_t player = game->player;
   map_t map = game->map;
 
   float current_angle = player.angle - FOV / 2;
-  float angle_delta = FOV / (float)distances->size;
+  float angle_delta = FOV / (float)zbuffer_size;
 
   int i = 0;
 
@@ -86,13 +87,47 @@ void game_set_distances(game_t* game) {
     map_sprites[i].is_rendered = 0;
   }
 
-  for (i = 0; i < distances->size; i += 1) {
-    distances->values[i] = cast_ray(&map, map_sprites, player.x, player.y, current_angle);
+  for (i = 0; i < zbuffer_size; i += 1) {
+    zbuffer[i] = cast_ray(&map, map_sprites, player.x, player.y, current_angle);
     current_angle += angle_delta;
+  }
+}
+
+void game_set_pbuffer(game_t* game) {
+  screen_t screen = game->screen;
+
+  int screen_w = screen.w;
+  int screen_h = screen.h;
+  int screen_r = screen.r;
+  pbuffer_t* pbuffer = screen.pbuffer;
+  zbuffer_t* zbuffer = screen.zbuffer;
+
+  // clear screen
+  for (int i = 0; i < screen_w * screen_h; i += 1) {
+    pbuffer[i] = 0;
+  }
+
+  // draw walls
+  for (int i = 0; i < screen_w / screen_r; i += 1) {
+    int height = (int)((float)screen_h / zbuffer[i]);
+
+    if (height > screen_h) {
+      height = screen_h;
+    }
+
+    int start_y = (screen_h - height) / 2;
+    int start_x = i * screen_r;
+
+    for (int y = start_y; y < start_y + height; y += 1) {
+      for (int x = start_x; x < start_x + screen_r; x += 1) {
+        pbuffer[y * screen_w + x] = 0xFF000000;
+      }
+    }
   }
 }
 
 void game_tick(game_t* game) {
   player_move(&game->player, &game->controls);
-  game_set_distances(game);
+  game_set_zbuffer(game);
+  game_set_pbuffer(game);
 }

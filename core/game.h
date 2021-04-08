@@ -6,16 +6,22 @@
 #include "raycast.h"
 #include "sprite.h"
 
+typedef unsigned int pbuffer_t;
+typedef float zbuffer_t;
+
 typedef struct {
-  int size;
-  float* values;
-} distances_t;
+  int w;
+  int h;
+  int r;
+  pbuffer_t* pbuffer;
+  zbuffer_t* zbuffer;
+} screen_t;
 
 typedef struct {
   map_t map;
   player_t player;
   controls_t controls;
-  distances_t distances;
+  screen_t screen;
 
   int sprites_count;
   sprite_t* sprites;
@@ -28,6 +34,7 @@ game_t* game_new(
   int map_h,
 
   int screen_w,
+  int screen_h,
   int screen_r,
 
   float start_x,
