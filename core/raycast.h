@@ -3,7 +3,8 @@
 
 #include "map.h"
 #include "player.h"
+#include "sprite.h"
 
-float get_wall_distance(const map_t* map, const player_t* player, float angle);
+float cast_ray(const map_t* map, map_sprite_t* map_sprites, float x, float y, float angle);
 
 #endif

@@ -4,6 +4,7 @@
 #include "map.h"
 #include "player.h"
 #include "raycast.h"
+#include "sprite.h"
 
 typedef struct {
   int size;
@@ -15,6 +16,11 @@ typedef struct {
   player_t player;
   controls_t controls;
   distances_t distances;
+
+  int sprites_count;
+  sprite_t* sprites;
+
+  map_sprite_t* map_sprites;
 } game_t;
 
 game_t* game_new(
@@ -26,7 +32,12 @@ game_t* game_new(
 
   float start_x,
   float start_y,
-  float start_angle);
+  float start_angle,
+
+  int sprites_count,
+  sprite_t* sprites
+
+);
 
 float* game_wall_distances(game_t* game);
 
