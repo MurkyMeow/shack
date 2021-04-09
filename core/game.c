@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "map.h"
+#include "player.h"
 #include "sprite.h"
 
 const float FOV = M_PI_4;
@@ -27,7 +28,7 @@ game_t* game_new(
   map_t map = map_new(map_w, map_h);
   game->map = map;
 
-  player_t player = {start_x, start_y, start_angle};
+  player_t player = {start_x, start_y, cosf(start_angle), sinf(start_angle)};
   game->player = player;
 
   controls_t controls = {0, 0, 0, 0, 0, 0};
@@ -78,8 +79,8 @@ void game_set_zbuffer(game_t* game) {
   player_t player = game->player;
   map_t map = game->map;
 
-  float current_angle = player.angle - FOV / 2;
-  float angle_delta = FOV / (float)zbuffer_size;
+  float plane_x = -player.dir_y;
+  float plane_y = player.dir_x;
 
   int i = 0;
 
@@ -88,8 +89,10 @@ void game_set_zbuffer(game_t* game) {
   }
 
   for (i = 0; i < zbuffer_size; i += 1) {
-    zbuffer[i] = cast_ray(&map, map_sprites, player.x, player.y, current_angle);
-    current_angle += angle_delta;
+    float cam_x = 2 * (float)i / (float)zbuffer_size - 1;
+    float ray_dir_x = player.dir_x + plane_x * cam_x;
+    float ray_dir_y = player.dir_y + plane_y * cam_x;
+    zbuffer[i] = cast_ray(&map, map_sprites, player.x, player.y, ray_dir_x, ray_dir_y);
   }
 }
 

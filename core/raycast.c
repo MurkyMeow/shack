@@ -4,10 +4,15 @@
 
 #include "sprite.h"
 
-float cast_ray(const map_t* map, map_sprite_t* map_sprites, float x, float y, float angle) {
-  float ray_dir_x = cosf(angle);
-  float ray_dir_y = sinf(angle);
+float cast_ray(
+  const map_t* map,
+  map_sprite_t* map_sprites,
+  float x,
+  float y,
+  float ray_dir_x,
+  float ray_dir_y
 
+) {
   float map_x = floorf(x);
   float map_y = floorf(y);
 

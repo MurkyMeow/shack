@@ -4,7 +4,8 @@
 typedef struct {
   float x;
   float y;
-  float angle;
+  float dir_x;
+  float dir_y;
 } player_t;
 
 typedef struct {
