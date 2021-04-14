@@ -1,16 +1,17 @@
-type Container = Int32ArrayConstructor | Float32ArrayConstructor;
+export const INT32 = Int32Array;
+export const FLOAT32 = Float32Array;
+export const UINT8CLAMPED = Uint8ClampedArray;
 
-export type Layout = { [x: string]: Container };
-export type Data<T extends Layout> = { [K in keyof T]: number };
+type CType = typeof INT32 | typeof FLOAT32 | typeof UINT8CLAMPED;
 
-export const INT32: Container = Int32Array;
-export const FLOAT32: Container = Float32Array;
+export type CStruct = { [x: string]: CType };
+export type Data<T extends CStruct> = { [K in keyof T]: number };
 
-function sizeof(layout: Layout): number {
+function sizeof(struct: CStruct): number {
   let size = 0;
 
-  for (const key in layout) {
-    size += layout[key].BYTES_PER_ELEMENT;
+  for (const key in struct) {
+    size += struct[key].BYTES_PER_ELEMENT;
   }
 
   return size;
@@ -31,9 +32,16 @@ export class MemoryAllocator {
     return _offset;
   }
 
-  allocStructArray<T extends Layout>(layout: T, data: Data<T>[]): number {
-    const keys = Object.keys(layout);
-    const structSize = sizeof(layout);
+  allocNumberArray<T extends CType>(Type: T, array: InstanceType<T>): number {
+    const pointer = this._malloc(array.length * Type.BYTES_PER_ELEMENT);
+    const type = new Type(this._buffer, pointer);
+    type.set(array);
+    return pointer;
+  }
+
+  allocStructArray<T extends CStruct>(struct: T, data: Data<T>[]): number {
+    const keys = Object.keys(struct);
+    const structSize = sizeof(struct);
     const pointer = this._malloc(structSize);
 
     for (let i = 0; i < data.length; i += 1) {
@@ -44,11 +52,11 @@ export class MemoryAllocator {
       for (let j = 0; j < keys.length; j += 1) {
         const key = keys[j];
 
-        const Type = layout[key];
+        const Type = struct[key];
         const type = new Type(this._buffer, offset, 1);
         type[0] = datum[key];
 
-        offset += layout[key].BYTES_PER_ELEMENT;
+        offset += struct[key].BYTES_PER_ELEMENT;
       }
     }
 
