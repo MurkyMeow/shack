@@ -10,6 +10,7 @@ typedef struct {
 typedef struct {
   sprite_t* original;
   int is_rendered;
+  int screen_stripe;
   float distance;
 } map_sprite_t;
 

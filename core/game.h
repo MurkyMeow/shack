@@ -3,19 +3,8 @@
 
 #include "map.h"
 #include "player.h"
-#include "raycast.h"
+#include "screen.h"
 #include "sprite.h"
-
-typedef unsigned int pbuffer_t;
-typedef float zbuffer_t;
-
-typedef struct {
-  int w;
-  int h;
-  int r;
-  pbuffer_t* pbuffer;
-  zbuffer_t* zbuffer;
-} screen_t;
 
 typedef struct {
   map_t map;

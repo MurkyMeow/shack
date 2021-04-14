@@ -3,11 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "map.h"
-#include "player.h"
-#include "sprite.h"
-
-const float FOV = M_PI_4;
+#include "raycast.h"
 
 game_t* game_new(
   int map_w,
@@ -73,27 +69,17 @@ pbuffer_t* game_pbuffer(game_t* game) {
 
 void game_set_zbuffer(game_t* game) {
   int zbuffer_size = game->screen.w / game->screen.r;
-  float* zbuffer = game->screen.zbuffer;
+  zbuffer_t* zbuffer = game->screen.zbuffer;
 
   map_sprite_t* map_sprites = game->map_sprites;
   player_t player = game->player;
   map_t map = game->map;
 
-  float plane_x = -player.dir_y;
-  float plane_y = player.dir_x;
-
-  int i = 0;
-
-  for (i = 0; i < map.w * map.h; i += 1) {
+  for (int i = 0; i < map.w * map.h; i += 1) {
     map_sprites[i].is_rendered = 0;
   }
 
-  for (i = 0; i < zbuffer_size; i += 1) {
-    float cam_x = 2 * (float)i / (float)zbuffer_size - 1;
-    float ray_dir_x = player.dir_x + plane_x * cam_x;
-    float ray_dir_y = player.dir_y + plane_y * cam_x;
-    zbuffer[i] = cast_ray(&map, map_sprites, player.x, player.y, ray_dir_x, ray_dir_y);
-  }
+  cast_rays(zbuffer, zbuffer_size, map.w, map.values, map_sprites, player.x, player.y, player.dir_x, player.dir_y);
 }
 
 void game_set_pbuffer(game_t* game) {
@@ -122,8 +108,46 @@ void game_set_pbuffer(game_t* game) {
     int start_x = i * screen_r;
 
     for (int y = start_y; y < start_y + height; y += 1) {
+      int offset_y = y * screen_w;
       for (int x = start_x; x < start_x + screen_r; x += 1) {
-        pbuffer[y * screen_w + x] = 0xFF000000;
+        pbuffer[offset_y + x] = 0xFF000000;
+      }
+    }
+  }
+
+  // draw sprites
+  map_t map = game->map;
+  map_sprite_t* map_sprites = game->map_sprites;
+
+  for (int i = 0; i < map.w * map.h; i += 1) {
+    map_sprite_t map_sprite = map_sprites[i];
+
+    if (map_sprite.is_rendered) {
+      int sprite_size = abs((int)((float)screen_h / map_sprite.distance));
+
+      int draw_start_y = screen_h / 2 - sprite_size / 2;
+      int draw_end_y = draw_start_y + sprite_size;
+      int draw_start_x = (screen_r * map_sprite.screen_stripe) - sprite_size / 2;
+      int draw_end_x = draw_start_x + sprite_size;
+
+      if (draw_start_y < 0) {
+        draw_start_y = 0;
+      }
+      if (draw_end_y > screen_h) {
+        draw_end_y = screen_h;
+      }
+      if (draw_start_x < 0) {
+        draw_start_x = 0;
+      }
+      if (draw_end_x > screen_w) {
+        draw_end_x = screen_w;
+      }
+
+      for (int y = draw_start_y; y < draw_end_y; y += 1) {
+        int offset_y = y * screen_w;
+        for (int x = draw_start_x; x < draw_end_x; x += 1) {
+          pbuffer[offset_y + x] = 0xFF0000FF;
+        }
       }
     }
   }
